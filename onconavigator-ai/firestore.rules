@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Entity Specific Validation Helpers ---
+    
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'dateCreated'])
+        && data.keys().size() == 4
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 128
+        && data.email is string && data.email.size() <= 128
+        && data.dateCreated is string && data.dateCreated.size() <= 128;
+    }
+
+    function isValidAssessment(data) {
+      return data.keys().hasAll(['id', 'userId', 'timestamp', 'cancerType', 'riskLevel', 'explanation', 'analysisText'])
+        && data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 128
+        && data.cancerType is string && data.cancerType.size() <= 128
+        && (data.riskLevel == 'Low' || data.riskLevel == 'Medium' || data.riskLevel == 'High')
+        && data.explanation is string && data.explanation.size() <= 50000
+        && data.analysisText is string && data.analysisText.size() <= 50000
+        && (!data.keys().contains('symptoms') || (data.symptoms is string && data.symptoms.size() <= 20000))
+        && (!data.keys().contains('followUpQuestion') || (data.followUpQuestion is string && data.followUpQuestion.size() <= 5000))
+        && (!data.keys().contains('detectedInputsCount') || (data.detectedInputsCount is int || data.detectedInputsCount is float))
+        && (!data.keys().contains('nextSteps') || (data.nextSteps is list && data.nextSteps.size() <= 20));
+    }
+
+    // --- Path Matching Rules ---
+
+    // /users/{userId}
+    match /users/{userId} {
+      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow create: if isSignedIn() && userId == request.auth.uid && isValidId(userId) && isValidUser(incoming());
+      allow update: if isSignedIn() && userId == request.auth.uid && isValidId(userId) && isValidUser(incoming())
+        && incoming().id == existing().id // id is immortal
+        && incoming().email == existing().email // email is immortal
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name']); // only allow updating name
+      allow delete: if false; // profiles are not deleted in this app
+    }
+
+    // /assessments/{assessmentId}
+    match /assessments/{assessmentId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidId(assessmentId) && isValidAssessment(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid
+        && isValidId(assessmentId) && isValidAssessment(incoming())
+        // Enforce keys that are immutable
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().timestamp == existing().timestamp
+        && incoming().diff(existing()).affectedKeys().hasOnly(['explanation', 'analysisText', 'riskLevel', 'nextSteps', 'followUpQuestion', 'symptoms', 'detectedInputsCount']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document containing metadata",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The authenticated Firebase User UID"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's registered name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Registered institutional email"
+        },
+        "dateCreated": {
+          "type": "string",
+          "description": "Date registration was made"
+        }
+      },
+      "required": ["id", "name", "email", "dateCreated"]
+    },
+    "Assessment": {
+      "title": "Assessment",
+      "description": "Educational oncology evaluation report saved by the user",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique document ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The owner's Firebase Authentication UID reference"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The time the report was logged"
+        },
+        "cancerType": {
+          "type": "string",
+          "description": "The oncology screening category selected"
+        },
+        "symptoms": {
+          "type": "string",
+          "description": "The textual symptoms provided"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": ["Low", "Medium", "High"],
+          "description": "Assessed priority warning level indicator"
+        },
+        "detectedInputsCount": {
+          "type": "number",
+          "description": "The number of files loaded"
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Technical clinical analysis details"
+        },
+        "analysisText": {
+          "type": "string",
+          "description": "Detailed educational evaluation description metrics"
+        },
+        "nextSteps": {
+          "type": "array",
+          "description": "Mandated next procedures or medical steps list"
+        },
+        "followUpQuestion": {
+          "type": "string",
+          "description": "The conversational self query followup"
+        }
+      },
+      "required": ["id", "userId", "timestamp", "cancerType", "riskLevel", "explanation", "analysisText"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual patient / student user metadata record"
+    },
+    "/assessments/{assessmentId}": {
+      "schema": "Assessment",
+      "description": "Log of oncology screening assessments"
+    }
+  }
+}

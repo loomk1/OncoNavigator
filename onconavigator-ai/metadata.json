@@ -1,0 +1,6 @@
+{
+  "name": "OncoNavigator AI",
+  "description": "An educational cancer risk screening and assessment assistant providing informational insights and screening guidance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
